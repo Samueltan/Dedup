@@ -16,6 +16,36 @@ public class Hash {
 		}
 		return new String(bytes);
 	}
+
+	/**
+	 * Converts a byte array into a long value
+	 * @param byte array
+	 * @return A long value of the byte array
+	 */
+	public static long byteToLong(byte[] b) {  
+		long s = 0;  
+		long s0 = b[0] & 0xff;
+		long s1 = b[1] & 0xff;  
+		long s2 = b[2] & 0xff;  
+		long s3 = b[3] & 0xff;  
+		long s4 = b[4] & 0xff;
+		long s5 = b[5] & 0xff;  
+		long s6 = b[6] & 0xff;  
+		long s7 = b[7] & 0xff;
+		s1 <<= 8;  
+		s2 <<= 16;  
+		s3 <<= 24;  
+		s4 <<= 8 * 4;  
+		s5 <<= 8 * 5;  
+		s6 <<= 8 * 6;  
+		s7 <<= 8 * 7;  
+		s = s0 | s1 | s2 | s3 | s4 | s5 | s6 | s7;  
+		return s;  
+	}  
+	
+	public static long longValue(String str){
+		return byteToLong(compactByte(str));
+	}
 	
 	/**
 	 * produce a hash of a given string
@@ -23,6 +53,10 @@ public class Hash {
 	 * @return Returns a collection of sixteen "readable" characters (! through ~) corresponding to this string.
 	 */
 	public static String compact(String str) {
+		return makeReadable(compactByte(str));
+	}
+
+	public static byte[] compactByte(String str) {
 		// setup the digest
 		MessageDigest md = null;
 		str += "foo"; // random text added to the string
@@ -33,7 +67,7 @@ public class Hash {
 			System.err.println("Hash digest format not known!");
 			System.exit(-1);
 		}
-		return makeReadable(md.digest());
+		return md.digest();
 	}
 	
 	public static boolean hashEquals(String str1, String str2){

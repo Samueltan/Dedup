@@ -47,6 +47,9 @@ public class HashDAOImpl implements IHashDAO {
     	conn.close();
     }
 
+    /* Find all the hash string and their hash id in the hash table and return them in a hash map
+     * @see dao.IHashDAO#findAllHashes()
+     */
     public HashMap<String, Integer> findAllHashes() throws Exception {  
     	HashMap<String, Integer> all= new HashMap<String, Integer>();  
         String sql="SELECT h.hash, h.id FROM hashes h;";
@@ -60,6 +63,9 @@ public class HashDAOImpl implements IHashDAO {
             return all;  
     }  
     
+    /* Find the hash list of a given file
+     * @see dao.IHashDAO#findFileHashes(java.lang.String)
+     */
     public List<HashRow> findFileHashes(String filename) throws Exception {  
         List<HashRow> all= new ArrayList<HashRow>();  
         String sql="SELECT h.id, h.string, h.hash FROM hashes h, mapping m WHERE m.filename = '";
@@ -80,6 +86,9 @@ public class HashDAOImpl implements IHashDAO {
             return all;  
     }  
   
+    /* Find the corresponding hash information of a given hash value
+     * @see dao.IHashDAO#findByHash(java.lang.String)
+     */
     public HashRow findByHash(String hash) throws Exception {  
         HashRow hr=null;  
         String sql="SELECT id, string, hash FROM hashes WHERE hash=?";  
@@ -109,6 +118,9 @@ public class HashDAOImpl implements IHashDAO {
 	//        return flag;  
 	//    }  
 	
+		/* Insert a hash entry
+		 * @see dao.IHashDAO#insertHash(java.lang.String, java.lang.String)
+		 */
 		@Override
 		public boolean insertHash(String string, String hash) throws Exception { 
 	        boolean flag=false;  
@@ -124,6 +136,9 @@ public class HashDAOImpl implements IHashDAO {
 	        return flag;  
 		}
 
+	/* Insert a mapping entry of the hash and the file it belongs to
+	 * @see dao.IHashDAO#insertMapping(java.lang.String, int, int, java.lang.String)
+	 */
 	@Override
 	public boolean insertMapping(String filename, int seqid, int hashid,
 			String foldername) throws Exception {
@@ -146,6 +161,9 @@ public class HashDAOImpl implements IHashDAO {
 		conn.commit();		
 	}
 
+	/* Return the current max hash id in the hash table
+	 * @see dao.IHashDAO#getMaxhashID()
+	 */
 	@Override
 	public int getMaxhashID() throws SQLException {
 		int maxid=0;
