@@ -114,7 +114,7 @@ public class FileLocker {
 		try {
 			hashlist = dao.findFileHashes(filename);
 			if(hashlist.size() == 0){
-				System.out.println("[[Loading file error:] File doesn't exist!  Please check again.");
+				System.out.println("[[Loading file error:] File '" + filename + "' doesn't exist!  Please check again.");
 				return -1;
 			}
 			
@@ -206,24 +206,24 @@ public class FileLocker {
 		int currentPos = 0;
 		int blockSize = 0;
 
-		final int CHUNK_LIMIT_HIGH = 16 * 1024;
+//		final int CHUNK_LIMIT_HIGH = 16 * 1024;
 		final int MAGIC_VALUE = 0X12;	// For sliding window verification
 		final int CHUNK_MASK = 0x1fff;	// For sliding window verification
-		int chunkLimitLow = 1024;
+//		int chunkLimitLow = 1024;
 				
 		long start = System.currentTimeMillis();
 		try {
 			// If the file is already stored, return
 			if((dao.findFileHashes(filename).size()) != 0){
-				System.out.println("[Storing file error:] The file is already stored! Please try another file.");
+				System.out.println("[Storing file error:] The file '" + filename + "' is already stored! Please try another file.");
 				return -1;
 			}
 			
 			File file = new File("input\\" + filename);
-			long filesize = file.length();
 			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
-			if(filesize < chunkLimitLow)
-				chunkLimitLow = (int)filesize;
+//			long filesize = file.length();
+//			if(filesize < chunkLimitLow)
+//				chunkLimitLow = (int)filesize;
 			
 			// Read the file content into memory on a block basis and then process
 			int buflen,hashlen;
@@ -258,7 +258,7 @@ public class FileLocker {
 //					if((hashlen = locateCDCPos()) == -1){	// For performance reason, this function is disabled and put inline
 					if(cdcFlag){
 						// If a matched position is found
-						hashlen = currentPos + SLIDING_WINDOW_SIZE;		
+						hashlen = chunkSize;		
 					}else{
 						// If block end is reached
 						hashlen = blockSize;
@@ -344,10 +344,10 @@ public class FileLocker {
 		FileLocker test = new FileLocker();
 		try {
 			// Store the file under input folder to the locker
-			test.storeFile("9.txt");
+			test.storeFile("1.exe");
 			
 			// Load the file to output folder from the locker
-			test.loadFile("9.txt");
+			test.loadFile("1.exe");
 			test.closeDB();
 		} catch (Exception e) {
 			e.printStackTrace();
