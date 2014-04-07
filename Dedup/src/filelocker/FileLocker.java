@@ -45,7 +45,6 @@ public class FileLocker {
 		try {
 			dao = DAOFactory.getIHashDAOInstance();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -54,7 +53,6 @@ public class FileLocker {
 		try {
 			dao.close();
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -100,7 +98,7 @@ public class FileLocker {
 //			System.out.println("isSameFile Running time " + (end-start) + " mini secs.");
 //		return result;
 //	}
-
+				
 	/**
 	 * Purpose: Search the file in database and 
 	 * generate a new file based on the file content returned from the hash list
@@ -108,7 +106,7 @@ public class FileLocker {
 	 * @return the file size or -1 if failed
 	 */
 	public int loadFile(String filename){
-		int size = 0;
+		int returnsize = 0;
         String s = null;
 
 		long start = System.currentTimeMillis();
@@ -124,8 +122,8 @@ public class FileLocker {
 			BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream("output\\" + filename));
 			for(HashRow hr: hashlist){
 				s = hr.getString();
-				bos.write(s.getBytes());;
-				size += s.length();
+				bos.write(s.getBytes());
+				returnsize += s.length();
 			}
 			bos.close();
 
@@ -134,7 +132,7 @@ public class FileLocker {
 		}
 		long end = System.currentTimeMillis();
 		System.out.println("storeFile Running time " + (end-start) + " mini secs.");
-		return size;		
+		return returnsize;		
 	}	
 
 //	public int loadFile(String filename){
@@ -165,6 +163,29 @@ public class FileLocker {
 //		System.out.println("storeFile Running time " + (end-start) + " mini secs.");
 //		return size;		
 //	}	
+
+	/**
+	 * This function is disabled due to performance issue (written in storeFile() in a inline manner)
+	 * @param chunksize
+	 * @param windowLong
+	 * @param filesize
+	 * @return true if the chunk is valid as per the validation rule
+	 */
+//	public boolean isValidChunk(int chunksize, long windowLong, long filesize){
+//		final int CHUNK_LIMIT_HIGH = 16 * 1024;
+//		final int MAGIC_VALUE = 0X12;	// For sliding window verification
+//		final int CHUNK_MASK = 0x1fff;	// For sliding window verification
+//		int chunkLimitLow = 1024;
+//		
+//		if(filesize < chunkLimitLow)
+//			chunkLimitLow = (int)filesize;
+//		if(chunksize < chunkLimitLow || chunksize > CHUNK_LIMIT_HIGH)
+//			return false;
+//		else
+//			// do a bit (&) operation with the CHUNK_MASK
+//			// if the result is equal to a predefined MAGIC_VALUE, the chunk is valid
+//			return (windowLong & CHUNK_MASK) == MAGIC_VALUE;
+//	}
 	
 	/**
 	 * Purpose: Save the file to hash database
@@ -184,9 +205,12 @@ public class FileLocker {
 		int currentMaxHashID = 0;
 		int currentPos = 0;
 		int blockSize = 0;
+
+		final int CHUNK_LIMIT_HIGH = 16 * 1024;
 		final int MAGIC_VALUE = 0X12;	// For sliding window verification
 		final int CHUNK_MASK = 0x1fff;	// For sliding window verification
-
+		int chunkLimitLow = 1024;
+				
 		long start = System.currentTimeMillis();
 		try {
 			// If the file is already stored, return
@@ -195,7 +219,11 @@ public class FileLocker {
 				return -1;
 			}
 			
-			BufferedInputStream bis = new BufferedInputStream(new FileInputStream("input\\" + filename));
+			File file = new File("input\\" + filename);
+			long filesize = file.length();
+			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+			if(filesize < chunkLimitLow)
+				chunkLimitLow = (int)filesize;
 			
 			// Read the file content into memory on a block basis and then process
 			int buflen,hashlen;
@@ -208,14 +236,17 @@ public class FileLocker {
 				while((blockSize = sbBlock.length()) > 0){
 					// 1. Use CDC (Content Defined Chunking) algorithm to locate the proper sliding window
 					boolean cdcFlag = false;
-					while(currentPos < blockSize - SLIDING_WINDOW_SIZE){
+					int chunkSize;
+					while((chunkSize = currentPos + SLIDING_WINDOW_SIZE) < blockSize){
 						// Keep moving the sliding window by one character each time
-						// The verification rule is: 
-						// Calculate the hash value of the sliding window string, do a bit (&) operation with the CHUNK_MASK
-						// if the result is equal to a predefined MAGIC_VALUE, 
-						// then the right border of the sliding window will be marked as a valid chunk border
-						windowStr = sbBlock.substring(currentPos, currentPos+SLIDING_WINDOW_SIZE);
+						// Calculate the hash value of the sliding window string, check if the sliding window offers a proper chunk position
+						// If valid then the right border of the sliding window will be marked as a valid chunk border
+						windowStr = sbBlock.substring(currentPos, chunkSize);
 						windowLong = Hash.longValue(windowStr);
+
+						// If the chunk size is in a valid range then do a bit (&) operation with the CHUNK_MASK
+						// if the result is equal to a predefined MAGIC_VALUE, the chunk is valid
+//						if(chunkSize > chunkLimitLow && chunkSize < CHUNK_LIMIT_HIGH &&	// This check will lower the performance
 						if((windowLong & CHUNK_MASK) == MAGIC_VALUE){
 							cdcFlag = true;		// matched chunk is found
 							break;
@@ -236,7 +267,7 @@ public class FileLocker {
 					sbBlock = sbBlock.delete(0, hashlen);
 					
 					// 3. Save the hash string into database (or update the reference for existing ones)
-					hash = Hash.compact(strPiece.toString());
+					hash = Hash.hash(strPiece.toString());
 					// 3.1 check if the hash string does not exist, 
 					// if so, insert the hash as a new entry in the hashes table
 					if(!all.containsKey(hash)){
@@ -259,7 +290,6 @@ public class FileLocker {
 		} catch(FileNotFoundException nfe){
 			System.out.println("[Storing file error:] File not found! Please check the file name.");
 		}catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -286,14 +316,15 @@ public class FileLocker {
 		long windowLong = 0;	// Long value of the string hash, which is used to verify if the current window match the criteria
 		String windowStr;		// The string in the sliding window
 		int blockSize = sbBlock.length();
+		int chunkSize = currentPos + SLIDING_WINDOW_SIZE;
 		
 		// Keep moving the sliding window by one character each time
 		// The verification rule is: 
 		// Calculate the hash value of the sliding window string, do a bit (&) operation with the CHUNK_MASK
 		// if the result is equal to a predefined MAGIC_VALUE, 
 		// then the right border of the sliding window will be marked as a valid chunk border
-		while(currentPos < blockSize - SLIDING_WINDOW_SIZE){
-			windowStr = sbBlock.substring(currentPos, currentPos+SLIDING_WINDOW_SIZE);
+		while(chunkSize < blockSize){
+			windowStr = sbBlock.substring(currentPos, chunkSize);
 			windowLong = Hash.longValue(windowStr);
 			if((windowLong & CHUNK_MASK) == MAGIC_VALUE){
 				break;
@@ -313,10 +344,10 @@ public class FileLocker {
 		FileLocker test = new FileLocker();
 		try {
 			// Store the file under input folder to the locker
-			test.storeFile("1.exe");
+			test.storeFile("9.txt");
 			
 			// Load the file to output folder from the locker
-			test.loadFile("1.exe");
+			test.loadFile("9.txt");
 			test.closeDB();
 		} catch (Exception e) {
 			e.printStackTrace();

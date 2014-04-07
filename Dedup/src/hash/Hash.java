@@ -48,7 +48,7 @@ public class Hash {
 	}
 	
 	/**
-	 * produce a hash of a given string
+	 * produce a readable hash of a given string
 	 * @param str The string to hash
 	 * @return Returns a collection of sixteen "readable" characters (! through ~) corresponding to this string.
 	 */
@@ -56,6 +56,15 @@ public class Hash {
 		return makeReadable(compactByte(str));
 	}
 
+	/**
+	 * produce a hash of a given string
+	 * @param str The string to hash
+	 * @return Returns a collection of sixteen "readable" characters (! through ~) corresponding to this string.
+	 */
+	public static String hash(String str) {
+		return new String(compactByte(str));
+	}
+	
 	public static byte[] compactByte(String str) {
 		// setup the digest
 		MessageDigest md = null;
