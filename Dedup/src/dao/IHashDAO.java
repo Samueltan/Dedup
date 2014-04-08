@@ -14,6 +14,7 @@ import dao.vo.HashRow;
 public interface IHashDAO {  
 //  public boolean insert(HashRow hashrow) throws Exception;  
     public boolean insertHash(String string, String hash) throws Exception;
+    public boolean insertHashByte(byte[] chunk, String hash) throws Exception;
     public boolean insertMapping(String filename, int seqid, int hashid, String foldername) throws Exception;
     
     public HashMap<String, Integer> findAllHashes() throws Exception;   

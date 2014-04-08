@@ -78,7 +78,7 @@ public class HashDAOImpl implements IHashDAO {
             while(rs.next()){  
             	hash=new HashRow();  
             	hash.setId(rs.getInt(1)); 
-            	hash.setString(rs.getString(2)); 
+            	hash.setHashBytes(rs.getBytes(2)); 
             	hash.setHash(rs.getString(3));  
                 all.add(hash);  
             }  
@@ -98,7 +98,7 @@ public class HashDAOImpl implements IHashDAO {
         if(rs.next()){  
         	hr = new HashRow();  
         	hr.setId(rs.getInt(1));  
-        	hr.setString(rs.getString(2));  
+        	hr.setHashBytes(rs.getBytes(2));  
         	hr.setHash(rs.getString(3));
         }  
         this.pstmt.close();  
@@ -136,6 +136,24 @@ public class HashDAOImpl implements IHashDAO {
 	        return flag;  
 		}
 
+		/* Insert a hash entry
+		 * @see dao.IHashDAO#insertHash(java.lang.String, java.lang.String)
+		 */
+		@Override
+		public boolean insertHashByte(byte[] chunk, String hash) throws Exception { 
+	        boolean flag=false;  
+	        
+	        String sql="INSERT INTO hashes (string, hash)VALUES(?,?)";  
+	        this.pstmt=this.conn.prepareStatement(sql);//实例化PreparedStatement对象  
+	        this.pstmt.setBytes(1, chunk);
+	        this.pstmt.setString(2, hash);  
+	        if(this.pstmt.executeUpdate()>0){  
+	            flag=true;  
+	        }  
+	        this.pstmt.close();  
+	        return flag;  
+		}
+		
 	/* Insert a mapping entry of the hash and the file it belongs to
 	 * @see dao.IHashDAO#insertMapping(java.lang.String, int, int, java.lang.String)
 	 */

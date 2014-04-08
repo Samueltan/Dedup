@@ -10,12 +10,12 @@ public class Hash {
 	 * @param bytes The array of bytes
 	 * @return A string with characters in the range ! through ~
 	 */
-	public static String makeReadable(byte[] bytes) {
-		for (int ii=0; ii<bytes.length; ii++) {
-			bytes[ii]=(byte) ((bytes[ii] & 0x5E)+32); // Convert to character ! through ~
-		}
-		return new String(bytes);
-	}
+//	public static String makeReadable(byte[] bytes) {
+//		for (int ii=0; ii<bytes.length; ii++) {
+//			bytes[ii]=(byte) ((bytes[ii] & 0x5E)+32); // Convert to character ! through ~
+//		}
+//		return new String(bytes);
+//	}
 
 	/**
 	 * Converts a byte array into a long value
@@ -43,8 +43,8 @@ public class Hash {
 		return s;  
 	}  
 	
-	public static long longValue(String str){
-		return byteToLong(compactByte(str));
+	public static long longValue(String s){
+		return byteToLong(hashString2Byte(s));
 	}
 	
 	/**
@@ -52,26 +52,39 @@ public class Hash {
 	 * @param str The string to hash
 	 * @return Returns a collection of sixteen "readable" characters (! through ~) corresponding to this string.
 	 */
-	public static String compact(String str) {
-		return makeReadable(compactByte(str));
+//	public static String compact(String str) {
+//		return makeReadable(hashStr2Byte(str));
+//	}
+
+	/**
+	 * produce a hash string of a given byte array
+	 * @param str The string to hash
+	 * @return Returns a collection of sixteen characters corresponding to this string.
+	 */
+	public static String hashByte2String(byte[] bytes) {
+		return new String(hashByte(bytes));
 	}
 
 	/**
-	 * produce a hash of a given string
+	 * produce a hashed byte array of a given string
 	 * @param str The string to hash
-	 * @return Returns a collection of sixteen "readable" characters (! through ~) corresponding to this string.
+	 * @return Returns a collection of sixteen characters corresponding to this string.
 	 */
-	public static String hash(String str) {
-		return new String(compactByte(str));
+	public static byte[] hashString2Byte(String str) {	
+		return hashByte(str.getBytes());
 	}
 	
-	public static byte[] compactByte(String str) {
+	/**
+	 * produce a hashed byte array of a given byte array
+	 * @param bytes The byte array to hash
+	 * @return Returns a collection of hashed byte
+	 */
+	public static byte[] hashByte(byte[] bytes) {
 		// setup the digest
 		MessageDigest md = null;
-		str += "foo"; // random text added to the string
 		try {
 			md = MessageDigest.getInstance("MD5");
-			md.update(str.getBytes());
+			md.update(bytes);
 		} catch (NoSuchAlgorithmException e) {
 			System.err.println("Hash digest format not known!");
 			System.exit(-1);
@@ -79,7 +92,7 @@ public class Hash {
 		return md.digest();
 	}
 	
-	public static boolean hashEquals(String str1, String str2){
-		return compact(str1).equals(compact(str2));
-	}
+//	public static boolean hashEquals(String str1, String str2){
+//		return compact(str1).equals(compact(str2));
+//	}
 }

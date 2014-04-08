@@ -4,7 +4,7 @@ import java.util.Date;
 
 public class HashRow {
 	private int id;  
-	private String string;  
+	private byte[] hashbytes;  
 	private String hash;
 	public int getId() {
 		return id;
@@ -12,11 +12,11 @@ public class HashRow {
 	public void setId(int id) {
 		this.id = id;
 	}
-	public String getString() {
-		return string;
+	public byte[] getHashBytes() {
+		return hashbytes;
 	}
-	public void setString(String string) {
-		this.string = string;
+	public void setHashBytes(byte[] hashbytes) {
+		this.hashbytes = hashbytes;
 	}
 	public String getHash() {
 		return hash;

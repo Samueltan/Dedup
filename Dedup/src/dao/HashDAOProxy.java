@@ -47,6 +47,20 @@ public class HashDAOProxy implements IHashDAO {
         return flag;  
     }  
 
+    public boolean insertHashByte(byte[] chunk, String hash) throws Exception {  
+        boolean flag=false;  
+        try{  
+            if(this.dao.findByHash(hash)==null){  
+                flag=this.dao.insertHashByte(chunk, hash);  
+            }  
+        }catch(Exception e){  
+            throw e;  
+//        }finally{  
+//            this.dbc.close();  
+        }  
+        return flag;  
+    }  
+    
     public boolean insertMapping(String filename, int seqid, int hashid, String foldername) throws Exception {  
         boolean flag=false;  
         try{              
