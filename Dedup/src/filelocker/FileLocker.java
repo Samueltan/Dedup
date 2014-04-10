@@ -58,49 +58,7 @@ public class FileLocker {
 			e.printStackTrace();
 		}
 	}
-	
-//	public static boolean isSameFile(String fileName1, String fileName2, boolean debug) throws IOException {
-//		byte[] buf1 = new byte[ioblocksize];
-//		byte[] buf2 = new byte[ioblocksize];
-//		String str1, str2;
-//		str1 = str2 = null;
-//		boolean result = false;
-//		long start = System.currentTimeMillis();
-//		
-//		// Prepare the test files
-//		File file1 = new File(fileName1);
-//		File file2 = new File(fileName2);
-//		BufferedInputStream bis1 = new BufferedInputStream(new FileInputStream(file1));
-//		BufferedInputStream bis2 = new BufferedInputStream(new FileInputStream(file2));
-//
-//		// read file and push 1024 bytes each time for calculating the finger print
-//		// Once the hash is different, stop and announce the difference
-//		while((bis1.read(buf1) != -1) && (bis2.read(buf2) != -1)){
-////		while((size1 = bis1.read(buf1)) != -1){
-//			str1 = new String(buf1);
-//			str2 = new String(buf2);
-//			
-//			if(!Hash.hashEquals(str1, str2)){
-//				System.out.println("file 1 and file 2 are different!");	
-//				bis1.close();
-//				bis2.close();
-//				return false;
-//			}
-//		}
-//		if(Hash.hashEquals(str1, str2)){
-//			System.out.println("file 1 and file 2 are the same!");
-//			result = true;
-//		}
-//		
-//		bis1.close();
-//		bis2.close();
-//
-//		long end = System.currentTimeMillis();
-//		if(debug)
-//			System.out.println("isSameFile Running time " + (end-start) + " mini secs.");
-//		return result;
-//	}
-				
+					
 	/**
 	 * Purpose: Search the file in database and 
 	 * generate a new file based on the file content returned from the hash list
@@ -124,6 +82,7 @@ public class FileLocker {
 				byte[] bytes = hr.getHashBytes();
 				bos.write(bytes);
 				returnsize += bytes.length;
+				System.out.print("\rLoading file progress: " + returnsize + " Bytes");
 			}
 			bos.close();
 
@@ -131,7 +90,7 @@ public class FileLocker {
 			e.printStackTrace();
 		}
 		long end = System.currentTimeMillis();
-		System.out.println("loadFile Running time " + (end-start) + " mini secs.");
+		System.out.println("\nloadFile Running time " + (end-start) + " mini secs.");
 		return returnsize;		
 	}	
 
@@ -167,7 +126,7 @@ public class FileLocker {
 	 * @return the file size that has been saved or -1 if error returned
 	 */
 	public int storeFile(String filename){
-		int size = 0;
+		int returnsize = 0;
 		byte[] buf = new byte[ioblocksize];
 		String strPiece = null;
 		String hash = null;
@@ -241,6 +200,8 @@ public class FileLocker {
 					}
 					strPiece = sbBlock.substring(0, hashlen);
 					sbBlock = sbBlock.delete(0, hashlen);
+					returnsize += hashlen;
+					System.out.print("\rStoring file progress: " + returnsize + " Bytes");
 					
 					// 3. Save the hash string into database (or update the reference for existing ones)
 					// Note: 
@@ -263,7 +224,6 @@ public class FileLocker {
 					// 4. then modify mapping table accordingly
 					dao.insertMapping(filename, 0, hashid, null);					
 				}
-				size += buflen;
 			}
 			
 			bis.close();
@@ -275,8 +235,8 @@ public class FileLocker {
 		}
 
 		long end = System.currentTimeMillis();
-		System.out.println("storeFile Running time " + (end-start) + " mini secs.");
-		return size;		
+		System.out.println("\nstoreFile Running time " + (end-start) + " mini secs.");
+		return returnsize;		
 	}
 	
 	public int deleteFile(String filename){
@@ -325,10 +285,10 @@ public class FileLocker {
 		FileLocker test = new FileLocker();
 		try {
 			// Store the file under input folder to the locker
-			test.storeFile("2.exe");
+			test.storeFile("9.txt");
 			
 			// Load the file to output folder from the locker
-			test.loadFile("2.exe");
+			test.loadFile("9.txt");
 			test.closeDB();
 		} catch (Exception e) {
 			e.printStackTrace();
