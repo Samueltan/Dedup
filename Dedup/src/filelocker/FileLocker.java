@@ -11,6 +11,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Properties;
 
 import dao.DAOFactory;
 import dao.IHashDAO;
@@ -29,13 +30,35 @@ import hash.Hash;
  * Create Date: 	2014/03/25
  */
 public class FileLocker {
+	final static int FILELOCKER_CAPACITY = 20 * 1024 * 1024;
 	final static int HASHBLOCK_SIZE = 8*1024;
 	final static int IOBLOCK_SIZE_MIN = 8*1024;
 	final static int IOBLOCK_SIZE_MAX = 4*1024*1024;
 	final static int SLIDING_WINDOW_SIZE = 48;
 	final static String CHARSET = "ISO-8859-1";
+	final static String DB_FILE = "dedup.db";
+	final static String CONFIG_PROPERTIES_FILE = "filelocker.properties";
+	final static String CONFIG_USEDSPACE ="usedspace";
 //	final static String CHARSET = "UTF-8";
 	static int ioblocksize = IOBLOCK_SIZE_MAX;
+	int progressPercentage = 0;		// % of the file that has been stored into file locker (0 ~ 100)
+	int spacePercentage = 0;		// % of the used space of the total file locker space (0 ~ 100)
+	public int getProgressPercentage() {
+		return progressPercentage;
+	}
+
+	public void setProgressPercentage(int progressPercentage) {
+		this.progressPercentage = progressPercentage;
+	}
+
+	public int getSpacePercentage() {
+		return spacePercentage;
+	}
+
+	public void setSpacePercentage(int spacePercentage) {
+		this.spacePercentage = spacePercentage;
+	}
+
 	StringBuffer sbBlock = null;
 	IHashDAO dao;
 	File file = null;
@@ -66,7 +89,7 @@ public class FileLocker {
 	 * @return the file size or -1 if failed
 	 */
 	public int loadFile(String filename){
-		int returnsize = 0;
+		int returnSize = 0;
 
 		long start = System.currentTimeMillis();
         List<HashRow> hashlist;
@@ -81,8 +104,8 @@ public class FileLocker {
 			for(HashRow hr: hashlist){
 				byte[] bytes = hr.getHashBytes();
 				bos.write(bytes);
-				returnsize += bytes.length;
-				System.out.print("\rLoading file progress: " + returnsize + " Bytes");
+				returnSize += bytes.length;
+//				System.out.print("\rLoading file progress: " + returnSize + " Bytes");
 			}
 			bos.close();
 
@@ -90,25 +113,25 @@ public class FileLocker {
 			e.printStackTrace();
 		}
 		long end = System.currentTimeMillis();
-		System.out.println("\nloadFile Running time " + (end-start) + " mini secs.");
-		return returnsize;		
+		System.out.println("loadFile Running time " + (end-start) + " mini secs.");
+		return returnSize;		
 	}	
 
 	/**
 	 * This function is disabled due to performance issue (written in storeFile() in a inline manner)
 	 * @param chunksize
 	 * @param windowLong
-	 * @param filesize
+	 * @param fileSize
 	 * @return true if the chunk is valid as per the validation rule
 	 */
-//	public boolean isValidChunk(int chunksize, long windowLong, long filesize){
+//	public boolean isValidChunk(int chunksize, long windowLong, long fileSize){
 //		final int CHUNK_LIMIT_HIGH = 16 * 1024;
 //		final int MAGIC_VALUE = 0X12;	// For sliding window verification
 //		final int CHUNK_MASK = 0x1fff;	// For sliding window verification
 //		int chunkLimitLow = 1024;
 //		
-//		if(filesize < chunkLimitLow)
-//			chunkLimitLow = (int)filesize;
+//		if(fileSize < chunkLimitLow)
+//			chunkLimitLow = (int)fileSize;
 //		if(chunksize < chunkLimitLow || chunksize > CHUNK_LIMIT_HIGH)
 //			return false;
 //		else
@@ -126,7 +149,7 @@ public class FileLocker {
 	 * @return the file size that has been saved or -1 if error returned
 	 */
 	public int storeFile(String filename){
-		int returnsize = 0;
+		int returnSize = 0;
 		byte[] buf = new byte[ioblocksize];
 		String strPiece = null;
 		String hash = null;
@@ -151,10 +174,21 @@ public class FileLocker {
 			
 			File file = new File("input\\" + filename);
 			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+			long fileSize = file.length();
+			
+			// Get space information from properties file
+			Properties prop = new Properties();
+			prop.load(new FileInputStream("conf\\" + CONFIG_PROPERTIES_FILE));
+			int usedSpace = Integer.parseInt(prop.getProperty(CONFIG_USEDSPACE));
+			if(usedSpace + fileSize > FILELOCKER_CAPACITY){
+				System.out.println("[Storing file error:] File locker has no enough space left to store this file!");
+				bis.close();
+				return -1;
+			}
+			
 			// The chunk limit feature below is disabled as it will greatly lower the performance!
-//			long filesize = file.length();
-//			if(filesize < chunkLimitLow)
-//				chunkLimitLow = (int)filesize;
+//			if(fileSize < chunkLimitLow)
+//				chunkLimitLow = (int)fileSize;
 			
 			// Read the file content into memory on a block basis and then process
 			int buflen,hashlen;
@@ -200,8 +234,9 @@ public class FileLocker {
 					}
 					strPiece = sbBlock.substring(0, hashlen);
 					sbBlock = sbBlock.delete(0, hashlen);
-					returnsize += hashlen;
-					System.out.print("\rStoring file progress: " + returnsize + " Bytes");
+					returnSize += hashlen;
+					progressPercentage = (int)((returnSize * 1.0 / fileSize) * 100);
+					System.out.print("\rStoring file progress: " + progressPercentage + "%");
 					
 					// 3. Save the hash string into database (or update the reference for existing ones)
 					// Note: 
@@ -225,6 +260,13 @@ public class FileLocker {
 					dao.insertMapping(filename, 0, hashid, null);					
 				}
 			}
+
+			// Update the space usage information
+			File dbfile = new File(DB_FILE);
+			usedSpace += dbfile.length();
+			spacePercentage = (int)((usedSpace * 1.0 / FILELOCKER_CAPACITY) * 100);
+			prop.setProperty(CONFIG_USEDSPACE, String.valueOf(usedSpace));
+			System.out.println("\nFile locker space usage: " + spacePercentage + "%");
 			
 			bis.close();
 			dao.commit();
@@ -235,8 +277,8 @@ public class FileLocker {
 		}
 
 		long end = System.currentTimeMillis();
-		System.out.println("\nstoreFile Running time " + (end-start) + " mini secs.");
-		return returnsize;		
+		System.out.println("storeFile Running time " + (end-start) + " mini secs.");
+		return returnSize;		
 	}
 	
 	public int deleteFile(String filename){
