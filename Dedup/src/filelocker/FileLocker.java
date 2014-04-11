@@ -13,6 +13,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 import dao.DAOFactory;
 import dao.IHashDAO;
 import dao.vo.HashRow;
@@ -96,7 +102,7 @@ public class FileLocker {
 		try {
 			hashlist = dao.findFileHashes(filename);
 			if(hashlist.size() == 0){
-				System.out.println("[[Loading file error:] File '" + filename + "' doesn't exist!  Please check again.");
+				System.out.println("[[Loading file error:] File '" + filename + "' doesn't exist in the file locker!  Please check again.");
 				return -1;
 			}
 			
@@ -282,8 +288,25 @@ public class FileLocker {
 	}
 	
 	public int deleteFile(String filename){
-		
-		return -1;
+		int returnSize = 0;
+		long start = System.currentTimeMillis();
+        List<HashRow> hashlist;
+		try {
+			hashlist = dao.findFileHashes(filename);
+			if(hashlist.size() == 0){
+				System.out.println("[[Deleting file error:] File '" + filename + "' doesn't exist in the file locker!  Please check again.");
+				return -1;
+			}
+			
+			dao.deleteMapping(filename);
+			dao.commit();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		long end = System.currentTimeMillis();
+		System.out.println("deleteFile Running time " + (end-start) + " mini secs.");
+		return returnSize;
 	}
 
 	/**
@@ -323,17 +346,4 @@ public class FileLocker {
 //		}
 //	}
 	
-	public static void main(String[] args) throws IOException {
-		FileLocker test = new FileLocker();
-		try {
-			// Store the file under input folder to the locker
-			test.storeFile("9.txt");
-			
-			// Load the file to output folder from the locker
-			test.loadFile("9.txt");
-			test.closeDB();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}		
-	}
 }

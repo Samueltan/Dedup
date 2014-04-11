@@ -101,7 +101,20 @@ public class HashDAOProxy implements IHashDAO {
         }  
         return hr;  
     }  
-  
+
+	@Override
+	public boolean deleteMapping(String filename) throws Exception {
+        boolean flag=false;  
+        try{              
+        	flag=this.dao.deleteMapping(filename);  
+        }catch(Exception e){  
+            throw e;  
+//        }finally{  
+//            this.dbc.close();  
+        }  
+        return flag;  
+	}
+	
     public void close() throws Exception{
     	this.dao.close();
     }
@@ -120,4 +133,5 @@ public class HashDAOProxy implements IHashDAO {
 	public int getMaxhashID() throws SQLException {		
 		return this.dao.getMaxhashID();
 	}
+
 }  

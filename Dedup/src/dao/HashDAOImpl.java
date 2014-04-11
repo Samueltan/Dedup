@@ -175,6 +175,19 @@ public class HashDAOImpl implements IHashDAO {
 	}
 
 	@Override
+	public boolean deleteMapping(String filename) throws Exception {
+        boolean flag=false;  
+        String sql="DELETE FROM mapping WHERE filename = ? ";  
+        this.pstmt=this.conn.prepareStatement(sql);//实例化PreparedStatement对象  
+        this.pstmt.setString(1, filename);  
+        if(this.pstmt.executeUpdate()>0){  
+            flag=true;  
+        }  
+        this.pstmt.close();  
+        return flag;  
+	}
+
+	@Override
 	public void commit() throws Exception {
 		conn.commit();		
 	}
@@ -193,7 +206,5 @@ public class HashDAOImpl implements IHashDAO {
         }  
         this.pstmt.close();  
 		return maxid;
-	}
-    
-  
+	}  
 }  
