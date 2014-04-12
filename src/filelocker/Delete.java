@@ -13,7 +13,7 @@ public class Delete {
 		FileLocker test = new FileLocker();
 		String file = null;
 		try {
-            Options options = new Options();//BY DongjieTang
+            Options options = new Options();//BY DongjieTang ererererere
             options.addOption("h"   ,false, "Print help for file storing");
             options.addOption("file" ,true,  "The file name that needs to be deleted");
 
