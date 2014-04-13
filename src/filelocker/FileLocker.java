@@ -59,6 +59,8 @@ public class FileLocker {
 	static int ioblocksize 									= IOBLOCK_SIZE_MAX;
 	int progressPercentage 									= 0;	// % of the file that has been stored into file locker (0 ~ 100)
 	int spacePercentage 									= 0;	// % of the used space of the total file locker space (0 ~ 100)
+	
+	public boolean flagLocked								= false;
 	public int getProgressPercentage() {
 		return progressPercentage;
 	}
@@ -186,6 +188,7 @@ public class FileLocker {
 			File file = new File(filename);
 			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
 			long fileSize = file.length();
+			filename = file.getName();
 			if(fileSize == 0){
 				System.out.println("[Storing file warning:] The file '" + filename + "' is empty! Please check.");
 				bis.close();
