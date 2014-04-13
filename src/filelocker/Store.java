@@ -37,7 +37,7 @@ public class Store {
 
 		try {
 			// Store the file under input folder to the locker
-			if(test.storeFile(file) != -1)
+			if(test.storeFile("input\\" + file) > 0)
 				System.out.println("The file " + file + " is stored to file locker successfully!");
 			
 			test.closeDB();

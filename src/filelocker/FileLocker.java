@@ -36,19 +36,29 @@ import hash.Hash;
  * Create Date: 	2014/03/25
  */
 public class FileLocker {
-	final static int FILELOCKER_CAPACITY = 20 * 1024 * 1024;
-	final static int HASHBLOCK_SIZE = 8*1024;
-	final static int IOBLOCK_SIZE_MIN = 8*1024;
-	final static int IOBLOCK_SIZE_MAX = 4*1024*1024;
-	final static int SLIDING_WINDOW_SIZE = 48;
-	final static String CHARSET = "ISO-8859-1";
-	final static String DB_FILE = "dedup.db";
-	final static String CONFIG_PROPERTIES_FILE = "filelocker.properties";
-	final static String CONFIG_USEDSPACE ="usedspace";
-//	final static String CHARSET = "UTF-8";
-	static int ioblocksize = IOBLOCK_SIZE_MAX;
-	int progressPercentage = 0;		// % of the file that has been stored into file locker (0 ~ 100)
-	int spacePercentage = 0;		// % of the used space of the total file locker space (0 ~ 100)
+	final static int FILELOCKER_CAPACITY 					= 20 * 1024 * 1024;
+	final static int HASHBLOCK_SIZE 						= 8*1024;
+	final static int IOBLOCK_SIZE_MIN 						= 8*1024;
+	final static int IOBLOCK_SIZE_MAX 						= 4*1024*1024;
+	final static int SLIDING_WINDOW_SIZE 					= 48;
+	final static String CHARSET 							= "ISO-8859-1";
+	final static String DB_FILE 							= "dedup.db";
+	final static String CONFIG_PROPERTIES_FILE 				= "filelocker.properties";
+	final static String CONFIG_USEDSPACE 					="usedspace";
+
+	public final static int ERR_LOCKER_FILENOTEXIST 		= -1;
+	public final static int ERR_LOCKER_FILEALREADYEXIST		= -2;
+	public final static int ERR_LOCKER_NOSPACE				= -3;
+	public final static int ERR_LOCKER_FILENOTFOUND			= -4;
+	
+	public final static String MSG_LOCKER_FILENOTEXIST 		= "' doesn't exist in the file locker!  Please check again.";
+	public final static String MSG_LOCKER_FILEALREADYEXIST	= "' is already stored! Please try another file.";
+	public final static String MSG_LOCKER_NOSPACE			= "File locker has no enough space left to store this file!";
+	public final static String MSG_LOCKER_FILENOTFOUND		= "File not found! Please check the file name.";
+	
+	static int ioblocksize 									= IOBLOCK_SIZE_MAX;
+	int progressPercentage 									= 0;	// % of the file that has been stored into file locker (0 ~ 100)
+	int spacePercentage 									= 0;	// % of the used space of the total file locker space (0 ~ 100)
 	public int getProgressPercentage() {
 		return progressPercentage;
 	}
@@ -102,11 +112,11 @@ public class FileLocker {
 		try {
 			hashlist = dao.findFileHashes(filename);
 			if(hashlist.size() == 0){
-				System.out.println("[[Loading file error:] File '" + filename + "' doesn't exist in the file locker!  Please check again.");
-				return -1;
+				System.out.println("[Loading file error:] File '" + filename + MSG_LOCKER_FILENOTEXIST);
+				return ERR_LOCKER_FILENOTEXIST;
 			}
 			
-			BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream("output\\" + filename));
+			BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(filename));
 			for(HashRow hr: hashlist){
 				byte[] bytes = hr.getHashBytes();
 				bos.write(bytes);
@@ -172,24 +182,32 @@ public class FileLocker {
 				
 		long start = System.currentTimeMillis();
 		try {
-			// If the file is already stored, return
-			if((dao.findFileHashes(filename).size()) != 0){
-				System.out.println("[Storing file error:] The file '" + filename + "' is already stored! Please try another file.");
+
+			File file = new File(filename);
+			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+			long fileSize = file.length();
+			if(fileSize == 0){
+				System.out.println("[Storing file warning:] The file '" + filename + "' is empty! Please check.");
+				bis.close();
 				return -1;
 			}
 			
-			File file = new File("input\\" + filename);
-			BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
-			long fileSize = file.length();
+			
+			// If the file is already stored, return
+			if((dao.findFileHashes(filename).size()) != 0){
+				System.out.println("[Storing file error:] The file '" + filename + MSG_LOCKER_FILEALREADYEXIST);
+				bis.close();
+				return ERR_LOCKER_FILEALREADYEXIST;
+			}			
 			
 			// Get space information from properties file
 			Properties prop = new Properties();
 			prop.load(new FileInputStream("conf\\" + CONFIG_PROPERTIES_FILE));
 			int usedSpace = Integer.parseInt(prop.getProperty(CONFIG_USEDSPACE));
 			if(usedSpace + fileSize > FILELOCKER_CAPACITY){
-				System.out.println("[Storing file error:] File locker has no enough space left to store this file!");
+				System.out.println("[Storing file error:] " + MSG_LOCKER_NOSPACE);
 				bis.close();
-				return -1;
+				return ERR_LOCKER_NOSPACE;
 			}
 			
 			// The chunk limit feature below is disabled as it will greatly lower the performance!
@@ -277,7 +295,8 @@ public class FileLocker {
 			bis.close();
 			dao.commit();
 		} catch(FileNotFoundException nfe){
-			System.out.println("[Storing file error:] File not found! Please check the file name.");
+			System.out.println("[Storing file error:] " + MSG_LOCKER_FILENOTFOUND);
+			return ERR_LOCKER_FILENOTFOUND;
 		}catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -294,8 +313,8 @@ public class FileLocker {
 		try {
 			hashlist = dao.findFileHashes(filename);
 			if(hashlist.size() == 0){
-				System.out.println("[[Deleting file error:] File '" + filename + "' doesn't exist in the file locker!  Please check again.");
-				return -1;
+				System.out.println("[[Deleting file error:] File '" + filename + MSG_LOCKER_FILENOTEXIST);
+				return ERR_LOCKER_FILENOTEXIST;
 			}
 			
 			dao.deleteMapping(filename);

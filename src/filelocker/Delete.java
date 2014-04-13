@@ -35,7 +35,7 @@ public class Delete {
 
 		try {
 			// Load the file to output folder from the locker
-			if(test.deleteFile(file) != -1)
+			if(test.deleteFile(file) > 0)
 				System.out.println("The file " + file + " is deleted from file locker successfully!");
 			test.closeDB();
 		} catch (Exception e) {

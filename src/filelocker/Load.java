@@ -37,7 +37,7 @@ public class Load {
 
 		try {
 			// Load the file to output folder from the locker
-			if(test.loadFile(file) != -1)
+			if(test.loadFile("output\\" + file) > 0)
 				System.out.println("The file " + file + " is loaded from file locker successfully!");
 			test.closeDB();
 		} catch (Exception e) {
