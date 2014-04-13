@@ -16,6 +16,7 @@ public interface IHashDAO {
     public HashMap<String, Integer> findAllHashes() throws Exception;   
     public List<HashRow> findFileHashes(String filename) throws Exception;    
     public HashRow findByHash(String hash) throws Exception;  
+    public List<String> findFiles() throws Exception;
     public int getMaxhashID() throws SQLException;
 
 	// Insert operations

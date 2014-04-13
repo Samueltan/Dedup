@@ -1,6 +1,7 @@
 package dao;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;  
 
@@ -132,6 +133,19 @@ public class HashDAOProxy implements IHashDAO {
 	@Override
 	public int getMaxhashID() throws SQLException {		
 		return this.dao.getMaxhashID();
+	}
+
+	@Override
+	public List<String> findFiles() throws Exception {
+        List<String> filenames = new ArrayList<String>();  
+        try{  
+        	filenames = this.dao.findFiles();  
+        }catch(Exception e){  
+            throw e;  
+//        }finally{  
+//            this.dbc.close();  
+        }  
+        return filenames;  
 	}
 
 }  

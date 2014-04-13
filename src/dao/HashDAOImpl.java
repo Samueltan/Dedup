@@ -52,7 +52,7 @@ public class HashDAOImpl implements IHashDAO {
      */
     public HashMap<String, Integer> findAllHashes() throws Exception {  
     	HashMap<String, Integer> all= new HashMap<String, Integer>();  
-        String sql="SELECT h.hash, h.id FROM hashes h;";
+        String sql="SELECT h.hash, h.id FROM hashes h";
 
             this.pstmt=this.conn.prepareStatement(sql); 
             ResultSet rs=this.pstmt.executeQuery();  
@@ -206,5 +206,19 @@ public class HashDAOImpl implements IHashDAO {
         }  
         this.pstmt.close();  
 		return maxid;
+	}
+
+	@Override
+	public List<String> findFiles() throws Exception {
+    	List<String> files= new ArrayList<String>();  
+        String sql="select distinct filename from mapping";
+
+            this.pstmt=this.conn.prepareStatement(sql); 
+            ResultSet rs=this.pstmt.executeQuery();  
+            while(rs.next()){  
+            	files.add(rs.getString(1));  
+            }  
+            this.pstmt.close();  
+            return files;  
 	}  
 }  

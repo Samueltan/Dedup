@@ -32,6 +32,7 @@ import filelocker.FileLocker;
 public class GUI {
 
 	private JFrame frame;
+	private FileLocker filelocker;
 	/**
 	 * Launch the application.
 	 */
@@ -71,7 +72,14 @@ public class GUI {
 		frame.getContentPane().add(lblTitle);
 
 		final DefaultListModel<String> listmodelLocal = new DefaultListModel<String>(); 
-		final DefaultListModel<String> listmodelLocker = new DefaultListModel<String>(); 
+		final DefaultListModel<String> listmodelLocker = new DefaultListModel<String>();
+		// Initialize the file list of the file locker
+		filelocker = new FileLocker();
+		List<String> storedFiles = filelocker.getStoredFiles();
+		if(storedFiles != null){
+			for(String filename: storedFiles)
+				listmodelLocker.addElement(filename);
+		}
 		
 		// Local file list box
 		final JList<String> filelistLocal = new JList<String>(listmodelLocal);
@@ -118,7 +126,6 @@ public class GUI {
 							"Information", 
 							JOptionPane.INFORMATION_MESSAGE);					
 				}else{
-					FileLocker filelocker = new FileLocker();
 					int result;
 					for(String filename: selectFiles){
 						if((result = filelocker.storeFile(filename)) > 0){
@@ -168,7 +175,7 @@ public class GUI {
 				
 				JFileChooser filechooser = new JFileChooser();
 				filechooser.setFileSelectionMode(JFileChooser.SAVE_DIALOG |JFileChooser.DIRECTORIES_ONLY);
-				filechooser.showDialog(null, "Load as");
+				filechooser.showDialog(null, "Load");
 				File file = filechooser.getSelectedFile();
 				String filePath;
 				if(file != null){
@@ -179,9 +186,16 @@ public class GUI {
 				
 				try
 				{
-					FileLocker filelocker = new FileLocker();
 					int result;
-					String filename = filelistLocker.getSelectedValue();
+					String filename = filePath + "\\" + filelistLocker.getSelectedValue();
+					int confirm = JOptionPane.showConfirmDialog(null, 
+							"The file will be loaded as " + filename + ", continue?", 
+							"Confirmation", 
+							JOptionPane.OK_CANCEL_OPTION);
+					if(confirm == JOptionPane.CANCEL_OPTION){
+						return;
+					}
+					
 					if((result = filelocker.loadFile(filename)) > 0){
 						JOptionPane.showMessageDialog(null, 
 								"The file " + filename + " is loaded from file locker successfully!", 
@@ -214,7 +228,6 @@ public class GUI {
 					return;
 				}
 				
-				FileLocker filelocker = new FileLocker();
 				String filename = filelistLocker.getSelectedValue();
 				if(filelocker.deleteFile(filename) >0)
 					System.out.println("The file " + filename + " is stored to file locker successfully!");

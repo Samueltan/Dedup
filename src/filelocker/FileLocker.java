@@ -9,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
@@ -112,9 +113,11 @@ public class FileLocker {
 		long start = System.currentTimeMillis();
         List<HashRow> hashlist;
 		try {
-			hashlist = dao.findFileHashes(filename);
+			File file = new File(filename);
+			String loadFileName = file.getName();
+			hashlist = dao.findFileHashes(loadFileName);
 			if(hashlist.size() == 0){
-				System.out.println("[Loading file error:] File '" + filename + MSG_LOCKER_FILENOTEXIST);
+				System.out.println("[Loading file error:] File '" + loadFileName + MSG_LOCKER_FILENOTEXIST);
 				return ERR_LOCKER_FILENOTEXIST;
 			}
 			
@@ -309,6 +312,11 @@ public class FileLocker {
 		return returnSize;		
 	}
 	
+	/**
+	 * Purpose: delete the file from file locker
+	 * @param filename
+	 * @return
+	 */
 	public int deleteFile(String filename){
 		int returnSize = 0;
 		long start = System.currentTimeMillis();
@@ -331,6 +339,21 @@ public class FileLocker {
 		return returnSize;
 	}
 
+	public List<String> getStoredFiles(){
+		List<String> files = new ArrayList<String>();
+		try {
+			files = dao.findFiles();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		if(files.size()>0){
+			return files;			
+		}else{
+			return null;
+		}
+	}
+	
 	/**
 	 * For performance reason, this function is put inside the storeFile() function and not invoked independently
 	 * The param transition cost affects the performance!
