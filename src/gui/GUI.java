@@ -2,6 +2,7 @@ package gui;
 
 import java.awt.Dimension;
 import java.awt.EventQueue;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -17,12 +18,17 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.SwingUtilities;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
 
 import filelocker.FileLocker;
+
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 /**
  * File locker GUI
@@ -31,8 +37,14 @@ import filelocker.FileLocker;
  */
 public class GUI {
 
-	private JFrame frame;
 	private FileLocker filelocker;
+	private JFrame frame;
+	JProgressBar progressBar;
+	
+	public void updateProgressBar(int progress){
+		progressBar.setValue(progress);
+		frame.getContentPane().update(null);
+	}
 	/**
 	 * Launch the application.
 	 */
@@ -61,6 +73,12 @@ public class GUI {
 	 */
 	private void initialize() {
 		frame = new JFrame();
+		frame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				filelocker.closeDB();
+			}
+		});
 		frame.setBounds(100, 100, 640, 480);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(null);
@@ -91,10 +109,6 @@ public class GUI {
 		filelistLocker.setBounds(329, 75, 253, 211);
 		frame.getContentPane().add(filelistLocker);
 
-		JProgressBar progressBar = new JProgressBar(0,100);
-		progressBar.setBounds(109, 332, 461, 14);
-		frame.getContentPane().add(progressBar);
-
 		JButton btnAddFile = new JButton("Add Files");
 		btnAddFile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -114,7 +128,29 @@ public class GUI {
 
 		btnAddFile.setBounds(52, 299, 99, 23);
 		frame.getContentPane().add(btnAddFile);
+		
+		progressBar = new JProgressBar(0,100);
+		progressBar.setBounds(109, 332, 461, 14);
+		frame.getContentPane().add(progressBar);
+		
+		JProgressBar progressBar2 = new JProgressBar (1, 100);
+		progressBar2.setString ("progressBar2");
+		progressBar2.setBounds(109, 422, 461, 14);
+		frame.getContentPane().add(progressBar2);
 
+//		frame.pack();
+//		frame.setVisible(true);
+		
+		for(int i=1;i<=100;++i){
+			progressBar2.setValue (i);
+			try {
+				Thread.sleep(50);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 		// Store the file from local into file locker
 		JButton btnStore = new JButton("Store");
 		btnStore.addActionListener(new ActionListener() {
@@ -127,9 +163,10 @@ public class GUI {
 							JOptionPane.INFORMATION_MESSAGE);					
 				}else{
 					int result;
+					progressBar.setValue(0);
+					progressBar.updateUI();
 					for(String filename: selectFiles){
-						if((result = filelocker.storeFile(filename)) > 0){
-							filelocker.closeDB();				
+						if((result = filelocker.storeFile(filename, progressBar)) > 0){
 							listmodelLocker.addElement(new File(filename).getName());
 							listmodelLocal.removeElement(filename);
 							JOptionPane.showMessageDialog(null, 
@@ -242,9 +279,9 @@ public class GUI {
 		lblStatus.setBounds(23, 332, 64, 14);
 		frame.getContentPane().add(lblStatus);
 				
-		JProgressBar progressBar_1 = new JProgressBar();
-		progressBar_1.setBounds(109, 362, 461, 14);
-		frame.getContentPane().add(progressBar_1);
+		JProgressBar usageBar = new JProgressBar();
+		usageBar.setBounds(109, 362, 461, 14);
+		frame.getContentPane().add(usageBar);
 		
 		JLabel lblSpaceUsage = new JLabel("Space Usage:");
 		lblSpaceUsage.setBounds(23, 362, 72, 14);
@@ -262,7 +299,7 @@ public class GUI {
 		lblFilesInFile.setBounds(395, 51, 120, 14);
 		frame.getContentPane().add(lblFilesInFile);
 		
-		JButton btnRemoveFile = new JButton("Remove File");
+		JButton btnRemoveFile = new JButton("Remove");
 		btnRemoveFile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				if(filelistLocal.getSelectedValue() == null){

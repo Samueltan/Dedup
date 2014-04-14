@@ -14,6 +14,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
+import javax.swing.JProgressBar;
+import javax.swing.SwingUtilities;
+
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
@@ -169,7 +172,7 @@ public class FileLocker {
 	 * @param filename
 	 * @return the file size that has been saved or -1 if error returned
 	 */
-	public int storeFile(String filename){
+	public int storeFile(String filename, final JProgressBar progressBar){
 		int returnSize = 0;
 		byte[] buf = new byte[ioblocksize];
 		String strPiece = null;
@@ -196,8 +199,7 @@ public class FileLocker {
 				System.out.println("[Storing file warning:] The file '" + filename + "' is empty! Please check.");
 				bis.close();
 				return -1;
-			}
-			
+			}			
 			
 			// If the file is already stored, return
 			if((dao.findFileHashes(filename).size()) != 0){
@@ -267,7 +269,20 @@ public class FileLocker {
 					returnSize += hashlen;
 					progressPercentage = (int)((returnSize * 1.0 / fileSize) * 100);
 					System.out.print("\rStoring file progress: " + progressPercentage + "%");
-					
+
+//					class ProgressBarHelper implements Runnable {    
+//						public void run(){
+//							progressBar.setValue(progressPercentage);
+//						}
+//					} 
+//					
+//					if(progressBar != null){
+//						new ProgressBarHelper().run();
+//					}
+
+					progressBar.setValue(progressPercentage);
+					Thread.sleep(5);
+					progressBar.updateUI();
 					// 3. Save the hash string into database (or update the reference for existing ones)
 					// Note: 
 					// The charset parameter 'CHARSET' is a mandatory in this case when the program handles a binary file
@@ -295,6 +310,7 @@ public class FileLocker {
 			File dbfile = new File(DB_FILE);
 			usedSpace += dbfile.length();
 			spacePercentage = (int)((usedSpace * 1.0 / FILELOCKER_CAPACITY) * 100);
+//			progressBar.setValue(progressPercentage);
 			prop.setProperty(CONFIG_USEDSPACE, String.valueOf(usedSpace));
 			System.out.println("\nFile locker space usage: " + spacePercentage + "%");
 			
