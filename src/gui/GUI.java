@@ -22,6 +22,7 @@ import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
@@ -93,15 +94,15 @@ public class GUI {
 		frame.getContentPane().add(lblStatus);
 				
 		final JProgressBar usageBar = new JProgressBar();
-		usageBar.setBounds(121, 379, 461, 14);
+		usageBar.setBounds(133, 379, 449, 14);
 		frame.getContentPane().add(usageBar);
 		
 		JLabel lblSpaceUsage = new JLabel("Space Usage:");
-		lblSpaceUsage.setBounds(35, 379, 72, 14);
+		lblSpaceUsage.setBounds(35, 379, 107, 14);
 		frame.getContentPane().add(lblSpaceUsage);
 		
 		final JLabel lblUsedSpace = new JLabel("Used space:");
-		lblUsedSpace.setBounds(121, 403, 72, 14);
+		lblUsedSpace.setBounds(133, 403, 449, 14);
 		frame.getContentPane().add(lblUsedSpace);
 
 		final DefaultListModel<String> listmodelLocal = new DefaultListModel<String>(); 
@@ -120,13 +121,25 @@ public class GUI {
 		// Local file list box
 		final JList<String> filelistLocal = new JList<String>(listmodelLocal);
 		filelistLocal.setBounds(32, 75, 253, 211);
+//		JScrollPane scrollPaneLocal = new JScrollPane(filelistLocal);
+//		scrollPaneLocal.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+//		scrollPaneLocal.setPreferredSize(new Dimension(50,100));
 		frame.getContentPane().add(filelistLocal);
 
 		// Remote filelocker  list box
 		final JList<String> filelistLocker = new JList<String>(listmodelLocker);
 		filelistLocker.setBounds(329, 75, 253, 211);
+//		JScrollPane scrollPaneLocker = new JScrollPane(filelistLocker);
+//		scrollPaneLocker.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 		frame.getContentPane().add(filelistLocker);
 
+		final DefaultListModel<String> lm = new DefaultListModel<String>(); 
+		final JList<String> fl = new JList<String>(lm);
+		JScrollPane sp = new JScrollPane(fl);
+		fl.setBounds(32, 75, 253, 211);
+//		scrollPaneLocal.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+		frame.getContentPane().add(sp);
+		
 		JButton btnAddFile = new JButton("Add Files");
 		btnAddFile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
@@ -141,7 +154,20 @@ public class GUI {
 				selectedFiles = filechooser.getSelectedFiles();
 				for(int i=0;i<selectedFiles.length;++i){
 					String filename=selectedFiles[i].getAbsolutePath();
-					listmodelLocal.addElement(filename);
+					file = new File (filename);
+					
+					// If filename is a file, add directly
+					if(file.isFile()){
+						listmodelLocal.addElement(filename);
+					}else{
+						// If filename is a directory, add all the non-directory files under the directory
+						File[] filenames = file.listFiles();
+						for (File f: filenames){
+							if(f.isFile())
+								listmodelLocal.addElement(f.getAbsolutePath());
+						}
+					}
+					
 				}				
 			}
 		}); 
@@ -150,7 +176,7 @@ public class GUI {
 		frame.getContentPane().add(btnAddFile);
 		
 		final JProgressBar progressBar = new JProgressBar(0,100);
-		progressBar.setBounds(121, 349, 461, 14);
+		progressBar.setBounds(133, 349, 449, 14);
 		progressBar.setStringPainted(true);     
 		progressBar.setForeground(Color.blue);   
 		frame.getContentPane().add(progressBar);
@@ -233,7 +259,7 @@ public class GUI {
 				catch(Exception m){}
 			}
 		});
-		btnLoad.setBounds(418, 305, 72, 23);
+		btnLoad.setBounds(421, 305, 72, 23);
 		frame.getContentPane().add(btnLoad);
 
 		// Delete the file from file locker

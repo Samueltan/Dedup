@@ -43,6 +43,10 @@ import hash.Hash;
  * File processing functions
  * Create Date: 	2014/03/25
  */
+/**
+ * @author user1
+ *
+ */
 public class FileLocker implements Runnable{
 	final static int FILELOCKER_CAPACITY 					= 20 * 1024 * 1024;
 	final static int HASHBLOCK_SIZE 						= 8*1024;
@@ -117,6 +121,14 @@ public class FileLocker implements Runnable{
 	JLabel lblUsedSpace;
 	DefaultListModel<String> listmodelLocal, listmodelLocker;
 	
+	/**
+	 * transfer the GUI components to the filelocker for later update
+	 * @param listmodelLocal
+	 * @param listmodelLocker
+	 * @param progressBar
+	 * @param usageBar
+	 * @param lblUsedSpace
+	 */
 	public void setGUI(DefaultListModel<String>listmodelLocal, 
 			DefaultListModel<String>listmodelLocker, 
 			JProgressBar progressBar, JProgressBar usageBar,JLabel lblUsedSpace){
@@ -127,6 +139,9 @@ public class FileLocker implements Runnable{
 		this.lblUsedSpace = lblUsedSpace;
 	}
 
+	/**
+	 * Refresh the GUI with the updated data
+	 */
 	public void updateGUI(){
 		listmodelLocker.addElement(new File(filename).getName());
 		listmodelLocal.removeElement(filename);	
@@ -142,16 +157,6 @@ public class FileLocker implements Runnable{
 		try {
 			dao = DAOFactory.getIHashDAOInstance();
 			usedSpace = getUsedSpace();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	public FileLocker(String filename, JProgressBar progressBar) {
-		try {
-			dao = DAOFactory.getIHashDAOInstance();
-			this.filename = filename;
-			this.progressBar = progressBar;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
