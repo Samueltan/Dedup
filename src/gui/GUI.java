@@ -109,9 +109,7 @@ public class GUI {
 		// Initialize the file list of the file locker
 		filelocker = new FileLocker();
 		usageBar.setValue(filelocker.getSpacePercentage());
-		int usedKB = (int)(filelocker.getUsedSpace() * 1.0 / 1000);
-		DecimalFormat df = new DecimalFormat("#,###"); 
-		lblUsedSpace.setText(df.format(usedKB) + "KB");
+		lblUsedSpace.setText(filelocker.getUsedKB());
 		
 		List<String> storedFiles = filelocker.getStoredFiles();
 		if(storedFiles != null){
@@ -171,32 +169,11 @@ public class GUI {
 				}else{
 					int result;
 					for(String filename: selectFiles){
+						filelocker.setGUI(listmodelLocal, listmodelLocker, progressBar, usageBar, lblUsedSpace);
 						filelocker.setFilename(filename);
-						filelocker.setProgressBar(progressBar);
+						
 						Thread filelockerThread = new Thread(filelocker);
 						filelockerThread.start();
-						
-						usageBar.setValue(filelocker.getSpacePercentage());
-						DecimalFormat df = new DecimalFormat("#,###"); 
-						int usedKB = (int)(filelocker.getUsedSpace() * 1.0 / 1000);
-						lblUsedSpace.setText(df.format(usedKB) + "KB");
-						usageBar.setValue(filelocker.getSpacePercentage());
-						listmodelLocker.addElement(new File(filename).getName());
-						listmodelLocal.removeElement(filename);
-
-						// Update the space usage information
-						try {
-							filelockerThread.join();
-						} catch (InterruptedException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-						File dbfile = new File(FileLocker.DB_FILE);
-						int usedSpace = (int)dbfile.length();
-						usedKB = (int)(usedSpace * 1.0 / 1000);
-						df = new DecimalFormat("#,###"); 
-						lblUsedSpace.setText(df.format(usedKB) + "KB");
-						
 					}
 				}
 			}
@@ -278,12 +255,7 @@ public class GUI {
 					System.out.println("The file " + filename + " is stored to file locker successfully!");
 				
 				listmodelLocker.removeElement(filename);
-
-				File dbfile = new File(FileLocker.DB_FILE);
-				int usedSpace = (int)dbfile.length();
-				int usedKB = (int)(usedSpace * 1.0 / 1000);
-				DecimalFormat df = new DecimalFormat("#,###"); 
-				lblUsedSpace.setText(df.format(usedKB) + "KB");
+				lblUsedSpace.setText(filelocker.getUsedKB());
 			}
 		});
 		btnDelete.setBounds(510, 305, 72, 23);

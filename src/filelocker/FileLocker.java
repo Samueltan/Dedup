@@ -9,11 +9,14 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
+import javax.swing.DefaultListModel;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
@@ -67,7 +70,21 @@ public class FileLocker implements Runnable{
 	int usedSpace											= 0;
 	
 	public int getUsedSpace() {
+		File dbfile = new File(DB_FILE);
+		usedSpace = (int)dbfile.length();
 		return usedSpace;
+	}
+
+	public String getUsedKB(){
+		DecimalFormat df = new DecimalFormat("#,###"); 
+		return df.format((int)(getUsedSpace() * 1.0 / 1000)) + "KB";
+	}
+	public String getFilename() {
+		return filename;
+	}
+
+	public void setFilename(String filename) {
+		this.filename = filename;
 	}
 
 	public void setUsedSpace(int usedSpace) {
@@ -93,34 +110,38 @@ public class FileLocker implements Runnable{
 
 	StringBuffer sbBlock = null;
 	IHashDAO dao;
-	JProgressBar progressBar;
 	String filename;
-		
-	public JProgressBar getProgressBar() {
-		return progressBar;
-	}
-
-	public void setProgressBar(JProgressBar progressBar) {
+	
+	// GUI components that need to be updated after data update
+	JProgressBar progressBar, usageBar;
+	JLabel lblUsedSpace;
+	DefaultListModel<String> listmodelLocal, listmodelLocker;
+	
+	public void setGUI(DefaultListModel<String>listmodelLocal, 
+			DefaultListModel<String>listmodelLocker, 
+			JProgressBar progressBar, JProgressBar usageBar,JLabel lblUsedSpace){
+		this.listmodelLocal = listmodelLocal;
+		this.listmodelLocker = listmodelLocker;
 		this.progressBar = progressBar;
+		this.usageBar = usageBar;
+		this.lblUsedSpace = lblUsedSpace;
 	}
 
-	public String getFilename() {
-		return filename;
+	public void updateGUI(){
+		listmodelLocker.addElement(new File(filename).getName());
+		listmodelLocal.removeElement(filename);	
+		progressBar.setValue(getProgressPercentage());
+		usageBar.setValue(getSpacePercentage());
+		lblUsedSpace.setText(getUsedKB());
 	}
-
-	public void setFilename(String filename) {
-		this.filename = filename;
-	}
-
+	
 	/**
 	 * The constructor will generate a DAO instance from the DAO factory
 	 */
 	public FileLocker() {
 		try {
 			dao = DAOFactory.getIHashDAOInstance();
-
-			File dbfile = new File(DB_FILE);
-			usedSpace = (int)dbfile.length();
+			usedSpace = getUsedSpace();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -212,7 +233,7 @@ public class FileLocker implements Runnable{
 	 * @param filename
 	 * @return the file size that has been saved or -1 if error returned
 	 */
-	public int storeFile(String filename, JProgressBar pb){
+	public int storeFile(String filename){
 		int returnSize = 0;
 		byte[] buf = new byte[ioblocksize];
 		String strPiece = null;
@@ -305,8 +326,6 @@ public class FileLocker implements Runnable{
 					returnSize += hashlen;
 					progressPercentage = (int)((returnSize * 1.0 / fileSize) * 100);
 					System.out.print("\rStoring file progress: " + progressPercentage + "%");
-					pb.setValue(progressPercentage);
-
 					progressBar.setValue(progressPercentage);
 					
 					// 3. Save the hash string into database (or update the reference for existing ones)
@@ -337,10 +356,8 @@ public class FileLocker implements Runnable{
 			bis.close();
 			dao.commit();
 			
-			// Update the space usage information
-			File dbfile = new File(DB_FILE);
-			usedSpace = (int)dbfile.length();
-			spacePercentage = (int)((usedSpace * 1.0 / FILELOCKER_CAPACITY) * 100);
+			// Update information in UI
+			updateGUI();
 		} catch(FileNotFoundException nfe){
 			System.out.println("[Storing file error:] " + MSG_LOCKER_FILENOTFOUND);
 			return ERR_LOCKER_FILENOTFOUND;
@@ -398,28 +415,27 @@ public class FileLocker implements Runnable{
 	@Override
 	public void run() {
 		int result;
-		storeFile(filename, progressBar);
-		if((result = storeFile(filename, progressBar)) > 0){
+		if((result = storeFile(filename)) > 0){
 			JOptionPane.showMessageDialog(null, 
 					"The file " + filename + " is stored to file locker successfully!", 
 					"Information", 
 					JOptionPane.INFORMATION_MESSAGE);	
-//		}else if(result == FileLocker.ERR_LOCKER_FILEALREADYEXIST){
-//			JOptionPane.showMessageDialog(null, 
-//					"The file " + filename + FileLocker.MSG_LOCKER_FILEALREADYEXIST, 
-//					"Information", 
-//					JOptionPane.INFORMATION_MESSAGE);								
-//		}else if(result == FileLocker.ERR_LOCKER_NOSPACE){
-//			JOptionPane.showMessageDialog(null, 
-//					FileLocker.MSG_LOCKER_NOSPACE, 
-//					"Information", 
-//					JOptionPane.INFORMATION_MESSAGE);								
-//		}else if(result == FileLocker.ERR_LOCKER_FILENOTFOUND){
-//			JOptionPane.showMessageDialog(null, 
-//					FileLocker.MSG_LOCKER_FILENOTFOUND, 
-//					"Information", 
-//					JOptionPane.INFORMATION_MESSAGE);								
-		}
+		}else if(result == FileLocker.ERR_LOCKER_FILEALREADYEXIST){
+			JOptionPane.showMessageDialog(null, 
+					"The file " + filename + FileLocker.MSG_LOCKER_FILEALREADYEXIST, 
+					"Information", 
+					JOptionPane.INFORMATION_MESSAGE);								
+		}else if(result == FileLocker.ERR_LOCKER_NOSPACE){
+			JOptionPane.showMessageDialog(null, 
+					FileLocker.MSG_LOCKER_NOSPACE, 
+					"Information", 
+					JOptionPane.INFORMATION_MESSAGE);								
+		}else if(result == FileLocker.ERR_LOCKER_FILENOTFOUND){
+			JOptionPane.showMessageDialog(null, 
+					FileLocker.MSG_LOCKER_FILENOTFOUND, 
+					"Information", 
+					JOptionPane.INFORMATION_MESSAGE);								
+		}				
 	}
 	
 	/**
