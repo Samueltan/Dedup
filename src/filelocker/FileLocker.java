@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
+import javax.swing.JOptionPane;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
 
@@ -39,16 +40,16 @@ import hash.Hash;
  * File processing functions
  * Create Date: 	2014/03/25
  */
-public class FileLocker {
+public class FileLocker implements Runnable{
 	final static int FILELOCKER_CAPACITY 					= 20 * 1024 * 1024;
 	final static int HASHBLOCK_SIZE 						= 8*1024;
 	final static int IOBLOCK_SIZE_MIN 						= 8*1024;
 	final static int IOBLOCK_SIZE_MAX 						= 4*1024*1024;
 	final static int SLIDING_WINDOW_SIZE 					= 48;
 	final static String CHARSET 							= "ISO-8859-1";
-	final static String DB_FILE 							= "dedup.db";
 	final static String CONFIG_PROPERTIES_FILE 				= "filelocker.properties";
-	final static String CONFIG_USEDSPACE 					="usedspace";
+	final static String CONFIG_USEDSPACE 					= "usedspace";
+	public final static String DB_FILE 						= "dedup.db";
 
 	public final static int ERR_LOCKER_FILENOTEXIST 		= -1;
 	public final static int ERR_LOCKER_FILEALREADYEXIST		= -2;
@@ -63,7 +64,16 @@ public class FileLocker {
 	static int ioblocksize 									= IOBLOCK_SIZE_MAX;
 	int progressPercentage 									= 0;	// % of the file that has been stored into file locker (0 ~ 100)
 	int spacePercentage 									= 0;	// % of the used space of the total file locker space (0 ~ 100)
+	int usedSpace											= 0;
 	
+	public int getUsedSpace() {
+		return usedSpace;
+	}
+
+	public void setUsedSpace(int usedSpace) {
+		this.usedSpace = usedSpace;
+	}
+
 	public boolean flagLocked								= false;
 	public int getProgressPercentage() {
 		return progressPercentage;
@@ -74,7 +84,7 @@ public class FileLocker {
 	}
 
 	public int getSpacePercentage() {
-		return spacePercentage;
+		return (int)((usedSpace * 1.0 / FILELOCKER_CAPACITY) * 100);
 	}
 
 	public void setSpacePercentage(int spacePercentage) {
@@ -83,14 +93,44 @@ public class FileLocker {
 
 	StringBuffer sbBlock = null;
 	IHashDAO dao;
-	File file = null;
+	JProgressBar progressBar;
+	String filename;
 		
+	public JProgressBar getProgressBar() {
+		return progressBar;
+	}
+
+	public void setProgressBar(JProgressBar progressBar) {
+		this.progressBar = progressBar;
+	}
+
+	public String getFilename() {
+		return filename;
+	}
+
+	public void setFilename(String filename) {
+		this.filename = filename;
+	}
+
 	/**
 	 * The constructor will generate a DAO instance from the DAO factory
 	 */
 	public FileLocker() {
 		try {
 			dao = DAOFactory.getIHashDAOInstance();
+
+			File dbfile = new File(DB_FILE);
+			usedSpace = (int)dbfile.length();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public FileLocker(String filename, JProgressBar progressBar) {
+		try {
+			dao = DAOFactory.getIHashDAOInstance();
+			this.filename = filename;
+			this.progressBar = progressBar;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -172,7 +212,7 @@ public class FileLocker {
 	 * @param filename
 	 * @return the file size that has been saved or -1 if error returned
 	 */
-	public int storeFile(String filename, final JProgressBar progressBar){
+	public int storeFile(String filename, JProgressBar pb){
 		int returnSize = 0;
 		byte[] buf = new byte[ioblocksize];
 		String strPiece = null;
@@ -207,11 +247,7 @@ public class FileLocker {
 				bis.close();
 				return ERR_LOCKER_FILEALREADYEXIST;
 			}			
-			
-			// Get space information from properties file
-			Properties prop = new Properties();
-			prop.load(new FileInputStream("conf\\" + CONFIG_PROPERTIES_FILE));
-			int usedSpace = Integer.parseInt(prop.getProperty(CONFIG_USEDSPACE));
+
 			if(usedSpace + fileSize > FILELOCKER_CAPACITY){
 				System.out.println("[Storing file error:] " + MSG_LOCKER_NOSPACE);
 				bis.close();
@@ -269,20 +305,10 @@ public class FileLocker {
 					returnSize += hashlen;
 					progressPercentage = (int)((returnSize * 1.0 / fileSize) * 100);
 					System.out.print("\rStoring file progress: " + progressPercentage + "%");
-
-//					class ProgressBarHelper implements Runnable {    
-//						public void run(){
-//							progressBar.setValue(progressPercentage);
-//						}
-//					} 
-//					
-//					if(progressBar != null){
-//						new ProgressBarHelper().run();
-//					}
+					pb.setValue(progressPercentage);
 
 					progressBar.setValue(progressPercentage);
-					Thread.sleep(5);
-					progressBar.updateUI();
+					
 					// 3. Save the hash string into database (or update the reference for existing ones)
 					// Note: 
 					// The charset parameter 'CHARSET' is a mandatory in this case when the program handles a binary file
@@ -306,16 +332,15 @@ public class FileLocker {
 				}
 			}
 
-			// Update the space usage information
-			File dbfile = new File(DB_FILE);
-			usedSpace += dbfile.length();
-			spacePercentage = (int)((usedSpace * 1.0 / FILELOCKER_CAPACITY) * 100);
-//			progressBar.setValue(progressPercentage);
-			prop.setProperty(CONFIG_USEDSPACE, String.valueOf(usedSpace));
 			System.out.println("\nFile locker space usage: " + spacePercentage + "%");
 			
 			bis.close();
 			dao.commit();
+			
+			// Update the space usage information
+			File dbfile = new File(DB_FILE);
+			usedSpace = (int)dbfile.length();
+			spacePercentage = (int)((usedSpace * 1.0 / FILELOCKER_CAPACITY) * 100);
 		} catch(FileNotFoundException nfe){
 			System.out.println("[Storing file error:] " + MSG_LOCKER_FILENOTFOUND);
 			return ERR_LOCKER_FILENOTFOUND;
@@ -367,6 +392,33 @@ public class FileLocker {
 			return files;			
 		}else{
 			return null;
+		}
+	}
+
+	@Override
+	public void run() {
+		int result;
+		storeFile(filename, progressBar);
+		if((result = storeFile(filename, progressBar)) > 0){
+			JOptionPane.showMessageDialog(null, 
+					"The file " + filename + " is stored to file locker successfully!", 
+					"Information", 
+					JOptionPane.INFORMATION_MESSAGE);	
+//		}else if(result == FileLocker.ERR_LOCKER_FILEALREADYEXIST){
+//			JOptionPane.showMessageDialog(null, 
+//					"The file " + filename + FileLocker.MSG_LOCKER_FILEALREADYEXIST, 
+//					"Information", 
+//					JOptionPane.INFORMATION_MESSAGE);								
+//		}else if(result == FileLocker.ERR_LOCKER_NOSPACE){
+//			JOptionPane.showMessageDialog(null, 
+//					FileLocker.MSG_LOCKER_NOSPACE, 
+//					"Information", 
+//					JOptionPane.INFORMATION_MESSAGE);								
+//		}else if(result == FileLocker.ERR_LOCKER_FILENOTFOUND){
+//			JOptionPane.showMessageDialog(null, 
+//					FileLocker.MSG_LOCKER_FILENOTFOUND, 
+//					"Information", 
+//					JOptionPane.INFORMATION_MESSAGE);								
 		}
 	}
 	

@@ -1,5 +1,6 @@
 package gui;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
@@ -8,6 +9,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.FileWriter;
+import java.text.DecimalFormat;
 import java.util.List;
 
 import javax.swing.AbstractListModel;
@@ -21,6 +23,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.UIManager;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.MessageBox;
@@ -39,12 +43,7 @@ public class GUI {
 
 	private FileLocker filelocker;
 	private JFrame frame;
-	JProgressBar progressBar;
 	
-	public void updateProgressBar(int progress){
-		progressBar.setValue(progress);
-		frame.getContentPane().update(null);
-	}
 	/**
 	 * Launch the application.
 	 */
@@ -67,7 +66,7 @@ public class GUI {
 	public GUI() {
 		initialize();
 	}
-
+	
 	/**
 	 * Initialize the contents of the frame.
 	 */
@@ -89,10 +88,31 @@ public class GUI {
 		lblTitle.setBounds(247, 10, 179, 29);
 		frame.getContentPane().add(lblTitle);
 
+		JLabel lblStatus = new JLabel("Progress:");
+		lblStatus.setBounds(35, 349, 64, 14);
+		frame.getContentPane().add(lblStatus);
+				
+		final JProgressBar usageBar = new JProgressBar();
+		usageBar.setBounds(121, 379, 461, 14);
+		frame.getContentPane().add(usageBar);
+		
+		JLabel lblSpaceUsage = new JLabel("Space Usage:");
+		lblSpaceUsage.setBounds(35, 379, 72, 14);
+		frame.getContentPane().add(lblSpaceUsage);
+		
+		final JLabel lblUsedSpace = new JLabel("Used space:");
+		lblUsedSpace.setBounds(121, 403, 72, 14);
+		frame.getContentPane().add(lblUsedSpace);
+
 		final DefaultListModel<String> listmodelLocal = new DefaultListModel<String>(); 
 		final DefaultListModel<String> listmodelLocker = new DefaultListModel<String>();
 		// Initialize the file list of the file locker
 		filelocker = new FileLocker();
+		usageBar.setValue(filelocker.getSpacePercentage());
+		int usedKB = (int)(filelocker.getUsedSpace() * 1.0 / 1000);
+		DecimalFormat df = new DecimalFormat("#,###"); 
+		lblUsedSpace.setText(df.format(usedKB) + "KB");
+		
 		List<String> storedFiles = filelocker.getStoredFiles();
 		if(storedFiles != null){
 			for(String filename: storedFiles)
@@ -113,48 +133,35 @@ public class GUI {
 		btnAddFile.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				File file=new File("C:\\");
+				File[] selectedFiles;
 				JFileChooser filechooser= new JFileChooser(file);
+				filechooser.setMultiSelectionEnabled(true);
 				filechooser.setDialogTitle("choose your file");
 				filechooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 				filechooser.setDialogType(JFileChooser.OPEN_DIALOG);
 				filechooser.showDialog(null, "Add");
-				file = filechooser.getSelectedFile();
-				if(file != null){
-					String filename=file.getAbsolutePath();
+				selectedFiles = filechooser.getSelectedFiles();
+				for(int i=0;i<selectedFiles.length;++i){
+					String filename=selectedFiles[i].getAbsolutePath();
 					listmodelLocal.addElement(filename);
 				}				
 			}
 		}); 
 
-		btnAddFile.setBounds(52, 299, 99, 23);
+		btnAddFile.setBounds(43, 305, 99, 23);
 		frame.getContentPane().add(btnAddFile);
 		
-		progressBar = new JProgressBar(0,100);
-		progressBar.setBounds(109, 332, 461, 14);
+		final JProgressBar progressBar = new JProgressBar(0,100);
+		progressBar.setBounds(121, 349, 461, 14);
+		progressBar.setStringPainted(true);     
+		progressBar.setForeground(Color.blue);   
 		frame.getContentPane().add(progressBar);
-		
-		JProgressBar progressBar2 = new JProgressBar (1, 100);
-		progressBar2.setString ("progressBar2");
-		progressBar2.setBounds(109, 422, 461, 14);
-		frame.getContentPane().add(progressBar2);
-
-//		frame.pack();
-//		frame.setVisible(true);
-		
-		for(int i=1;i<=100;++i){
-			progressBar2.setValue (i);
-			try {
-				Thread.sleep(50);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
 		
 		// Store the file from local into file locker
 		JButton btnStore = new JButton("Store");
 		btnStore.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				progressBar.setValue(0);
 				List<String> selectFiles = filelistLocal.getSelectedValuesList();
 				if(selectFiles.size() == 0){
 					JOptionPane.showMessageDialog(null, 
@@ -163,37 +170,38 @@ public class GUI {
 							JOptionPane.INFORMATION_MESSAGE);					
 				}else{
 					int result;
-					progressBar.setValue(0);
-					progressBar.updateUI();
 					for(String filename: selectFiles){
-						if((result = filelocker.storeFile(filename, progressBar)) > 0){
-							listmodelLocker.addElement(new File(filename).getName());
-							listmodelLocal.removeElement(filename);
-							JOptionPane.showMessageDialog(null, 
-									"The file " + filename + " is stored to file locker successfully!", 
-									"Information", 
-									JOptionPane.INFORMATION_MESSAGE);	
-						}else if(result == FileLocker.ERR_LOCKER_FILEALREADYEXIST){
-							JOptionPane.showMessageDialog(null, 
-									"The file " + filename + FileLocker.MSG_LOCKER_FILEALREADYEXIST, 
-									"Information", 
-									JOptionPane.INFORMATION_MESSAGE);								
-						}else if(result == FileLocker.ERR_LOCKER_NOSPACE){
-							JOptionPane.showMessageDialog(null, 
-									FileLocker.MSG_LOCKER_NOSPACE, 
-									"Information", 
-									JOptionPane.INFORMATION_MESSAGE);								
-						}else if(result == FileLocker.ERR_LOCKER_FILENOTFOUND){
-							JOptionPane.showMessageDialog(null, 
-									FileLocker.MSG_LOCKER_FILENOTFOUND, 
-									"Information", 
-									JOptionPane.INFORMATION_MESSAGE);								
+						filelocker.setFilename(filename);
+						filelocker.setProgressBar(progressBar);
+						Thread filelockerThread = new Thread(filelocker);
+						filelockerThread.start();
+						
+						usageBar.setValue(filelocker.getSpacePercentage());
+						DecimalFormat df = new DecimalFormat("#,###"); 
+						int usedKB = (int)(filelocker.getUsedSpace() * 1.0 / 1000);
+						lblUsedSpace.setText(df.format(usedKB) + "KB");
+						usageBar.setValue(filelocker.getSpacePercentage());
+						listmodelLocker.addElement(new File(filename).getName());
+						listmodelLocal.removeElement(filename);
+
+						// Update the space usage information
+						try {
+							filelockerThread.join();
+						} catch (InterruptedException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
 						}
+						File dbfile = new File(FileLocker.DB_FILE);
+						int usedSpace = (int)dbfile.length();
+						usedKB = (int)(usedSpace * 1.0 / 1000);
+						df = new DecimalFormat("#,###"); 
+						lblUsedSpace.setText(df.format(usedKB) + "KB");
+						
 					}
 				}
 			}
 		});
-		btnStore.setBounds(339, 299, 72, 23);
+		btnStore.setBounds(330, 305, 72, 23);
 		frame.getContentPane().add(btnStore);
 
 		// Load file from file server to local
@@ -248,7 +256,7 @@ public class GUI {
 				catch(Exception m){}
 			}
 		});
-		btnLoad.setBounds(427, 299, 72, 23);
+		btnLoad.setBounds(418, 305, 72, 23);
 		frame.getContentPane().add(btnLoad);
 
 		// Delete the file from file locker
@@ -270,26 +278,16 @@ public class GUI {
 					System.out.println("The file " + filename + " is stored to file locker successfully!");
 				
 				listmodelLocker.removeElement(filename);
+
+				File dbfile = new File(FileLocker.DB_FILE);
+				int usedSpace = (int)dbfile.length();
+				int usedKB = (int)(usedSpace * 1.0 / 1000);
+				DecimalFormat df = new DecimalFormat("#,###"); 
+				lblUsedSpace.setText(df.format(usedKB) + "KB");
 			}
 		});
-		btnDelete.setBounds(519, 299, 72, 23);
+		btnDelete.setBounds(510, 305, 72, 23);
 		frame.getContentPane().add(btnDelete);
-
-		JLabel lblStatus = new JLabel("Progress:");
-		lblStatus.setBounds(23, 332, 64, 14);
-		frame.getContentPane().add(lblStatus);
-				
-		JProgressBar usageBar = new JProgressBar();
-		usageBar.setBounds(109, 362, 461, 14);
-		frame.getContentPane().add(usageBar);
-		
-		JLabel lblSpaceUsage = new JLabel("Space Usage:");
-		lblSpaceUsage.setBounds(23, 362, 72, 14);
-		frame.getContentPane().add(lblSpaceUsage);
-		
-		JLabel lblUsedSpace = new JLabel("Used space:");
-		lblUsedSpace.setBounds(109, 386, 72, 14);
-		frame.getContentPane().add(lblUsedSpace);
 		
 		JLabel lblLocalFiles = new JLabel("Local files");
 		lblLocalFiles.setBounds(112, 51, 81, 14);
@@ -313,7 +311,7 @@ public class GUI {
 				}
 			}
 		});
-		btnRemoveFile.setBounds(169, 299, 99, 23);
+		btnRemoveFile.setBounds(160, 305, 99, 23);
 		frame.getContentPane().add(btnRemoveFile);
 	}
 }
