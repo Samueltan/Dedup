@@ -143,6 +143,8 @@ public class FileLocker implements Runnable{
 	 * Refresh the GUI with the updated data
 	 */
 	public void updateGUI(){
+		if (listmodelLocker == null) return;
+		
 		listmodelLocker.addElement(new File(filename).getName());
 		listmodelLocal.removeElement(filename);	
 		progressBar.setValue(getProgressPercentage());
@@ -331,7 +333,8 @@ public class FileLocker implements Runnable{
 					returnSize += hashlen;
 					progressPercentage = (int)((returnSize * 1.0 / fileSize) * 100);
 					System.out.print("\rStoring file progress: " + progressPercentage + "%");
-					progressBar.setValue(progressPercentage);
+					if(progressBar != null)
+						progressBar.setValue(progressPercentage);
 					
 					// 3. Save the hash string into database (or update the reference for existing ones)
 					// Note: 
