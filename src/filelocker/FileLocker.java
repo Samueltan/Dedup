@@ -276,11 +276,11 @@ public class FileLocker implements Runnable{
 				return ERR_LOCKER_FILEALREADYEXIST;
 			}			
 
-			if(usedSpace + fileSize > FILELOCKER_CAPACITY){
-				System.out.println("[Storing file error:] " + MSG_LOCKER_NOSPACE);
-				bis.close();
-				return ERR_LOCKER_NOSPACE;
-			}
+//			if(usedSpace + fileSize > FILELOCKER_CAPACITY){
+//				System.out.println("[Storing file error:] " + MSG_LOCKER_NOSPACE);
+//				bis.close();
+//				return ERR_LOCKER_NOSPACE;
+//			}
 			
 			// The chunk limit feature below is disabled as it will greatly lower the performance!
 //			if(fileSize < chunkLimitLow)
@@ -359,7 +359,7 @@ public class FileLocker implements Runnable{
 				}
 			}
 
-			System.out.println("\nFile locker space usage: " + spacePercentage + "%");
+//			System.out.println("\nFile locker space usage: " + spacePercentage + "%");
 			
 			bis.close();
 			dao.commit();
@@ -383,18 +383,18 @@ public class FileLocker implements Runnable{
 	 * @param filename
 	 * @return
 	 */
-	public int deleteFile(String filename){
-		int returnSize = 0;
+	public boolean deleteFile(String filename){
+		boolean result = false;
 		long start = System.currentTimeMillis();
         List<HashRow> hashlist;
 		try {
 			hashlist = dao.findFileHashes(filename);
 			if(hashlist.size() == 0){
 				System.out.println("[[Deleting file error:] File '" + filename + MSG_LOCKER_FILENOTEXIST);
-				return ERR_LOCKER_FILENOTEXIST;
+				return false;
 			}
 			
-			dao.deleteMapping(filename);
+			result = dao.deleteMapping(filename);
 			dao.commit();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -402,7 +402,7 @@ public class FileLocker implements Runnable{
 
 		long end = System.currentTimeMillis();
 		System.out.println("deleteFile Running time " + (end-start) + " mini secs.");
-		return returnSize;
+		return result;
 	}
 
 	public List<String> getStoredFiles(){
@@ -424,10 +424,10 @@ public class FileLocker implements Runnable{
 	public void run() {
 		int result;
 		if((result = storeFile(filename)) > 0){
-			JOptionPane.showMessageDialog(null, 
-					"The file " + filename + " is stored to file locker successfully!", 
-					"Information", 
-					JOptionPane.INFORMATION_MESSAGE);	
+//			JOptionPane.showMessageDialog(null, 
+//					"The file " + filename + " is stored to file locker successfully!", 
+//					"Information", 
+//					JOptionPane.INFORMATION_MESSAGE);	
 		}else if(result == FileLocker.ERR_LOCKER_FILEALREADYEXIST){
 			JOptionPane.showMessageDialog(null, 
 					"The file " + filename + FileLocker.MSG_LOCKER_FILEALREADYEXIST, 

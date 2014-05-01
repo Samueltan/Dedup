@@ -166,7 +166,7 @@ public class SocketC {
 						long loc=s1.substring(1).indexOf('\n');
 						String filename=s1.substring(1,(int) loc+1);
 						System.out.println("Filename is "+filename);
-						if(filelocker.deleteFile(filename) >0)
+						if(filelocker.deleteFile(filename))
 							System.out.println("The file " + filename + " is stored to file locker successfully!");
 					}
 					

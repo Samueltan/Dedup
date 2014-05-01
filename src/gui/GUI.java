@@ -79,7 +79,7 @@ public class GUI {
 				filelocker.closeDB();
 			}
 		});
-		frame.setBounds(100, 100, 640, 480);
+		frame.setBounds(100, 100, 640, 580);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(null);
 
@@ -90,19 +90,19 @@ public class GUI {
 		frame.getContentPane().add(lblTitle);
 
 		JLabel lblStatus = new JLabel("Progress:");
-		lblStatus.setBounds(35, 349, 64, 14);
+		lblStatus.setBounds(32, 452, 64, 14);
 		frame.getContentPane().add(lblStatus);
 				
 		final JProgressBar usageBar = new JProgressBar();
-		usageBar.setBounds(133, 379, 449, 14);
+		usageBar.setBounds(130, 482, 449, 14);
 		frame.getContentPane().add(usageBar);
 		
 		JLabel lblSpaceUsage = new JLabel("Space Usage:");
-		lblSpaceUsage.setBounds(35, 379, 107, 14);
+		lblSpaceUsage.setBounds(32, 482, 107, 14);
 		frame.getContentPane().add(lblSpaceUsage);
 		
 		final JLabel lblUsedSpace = new JLabel("Used space:");
-		lblUsedSpace.setBounds(133, 403, 449, 14);
+		lblUsedSpace.setBounds(130, 506, 449, 14);
 		frame.getContentPane().add(lblUsedSpace);
 
 		final DefaultListModel<String> listmodelLocal = new DefaultListModel<String>(); 
@@ -120,7 +120,7 @@ public class GUI {
 		
 		// Local file list box
 		final JList<String> filelistLocal = new JList<String>(listmodelLocal);
-		filelistLocal.setBounds(32, 75, 253, 211);
+		filelistLocal.setBounds(32, 75, 253, 319);
 //		JScrollPane scrollPaneLocal = new JScrollPane(filelistLocal);
 //		scrollPaneLocal.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 //		scrollPaneLocal.setPreferredSize(new Dimension(50,100));
@@ -128,7 +128,7 @@ public class GUI {
 
 		// Remote filelocker  list box
 		final JList<String> filelistLocker = new JList<String>(listmodelLocker);
-		filelistLocker.setBounds(329, 75, 253, 211);
+		filelistLocker.setBounds(329, 75, 253, 319);
 //		JScrollPane scrollPaneLocker = new JScrollPane(filelistLocker);
 //		scrollPaneLocker.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 		frame.getContentPane().add(filelistLocker);
@@ -172,11 +172,11 @@ public class GUI {
 			}
 		}); 
 
-		btnAddFile.setBounds(43, 305, 99, 23);
+		btnAddFile.setBounds(42, 404, 99, 23);
 		frame.getContentPane().add(btnAddFile);
 		
 		final JProgressBar progressBar = new JProgressBar(0,100);
-		progressBar.setBounds(133, 349, 449, 14);
+		progressBar.setBounds(130, 452, 449, 14);
 		progressBar.setStringPainted(true);     
 		progressBar.setForeground(Color.blue);   
 		frame.getContentPane().add(progressBar);
@@ -187,24 +187,41 @@ public class GUI {
 			public void actionPerformed(ActionEvent e) {
 				progressBar.setValue(0);
 				List<String> selectFiles = filelistLocal.getSelectedValuesList();
-				if(selectFiles.size() == 0){
+				int selectedCount = selectFiles.size();
+				if(selectedCount == 0){
 					JOptionPane.showMessageDialog(null, 
 							"Please select a file to proceed!", 
 							"Information", 
 							JOptionPane.INFORMATION_MESSAGE);					
 				}else{
 					int result;
-					for(String filename: selectFiles){
+					
+					Thread[] filelockerThreads = new Thread[selectedCount];					
+					if(selectedCount == 1){
+						filelocker.setFilename(filelistLocal.getSelectedValue());
 						filelocker.setGUI(listmodelLocal, listmodelLocker, progressBar, usageBar, lblUsedSpace);
-						filelocker.setFilename(filename);
-						
 						Thread filelockerThread = new Thread(filelocker);
 						filelockerThread.start();
+					}else{
+						for(int ii=0; ii< selectedCount; ++ii){
+							String filename = selectFiles.get(ii);
+							filelocker.setGUI(listmodelLocal, listmodelLocker, progressBar, usageBar, lblUsedSpace);
+							filelocker.setFilename(filename);
+
+							filelockerThreads[ii] = new Thread(filelocker);
+							try {
+								filelockerThreads[ii].run();
+								//							filelockerThreads[ii].join();
+							} catch (Exception e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+						}
 					}
 				}
 			}
 		});
-		btnStore.setBounds(330, 305, 72, 23);
+		btnStore.setBounds(329, 404, 72, 23);
 		frame.getContentPane().add(btnStore);
 
 		// Load file from file server to local
@@ -259,7 +276,7 @@ public class GUI {
 				catch(Exception m){}
 			}
 		});
-		btnLoad.setBounds(421, 305, 72, 23);
+		btnLoad.setBounds(420, 404, 72, 23);
 		frame.getContentPane().add(btnLoad);
 
 		// Delete the file from file locker
@@ -275,16 +292,17 @@ public class GUI {
 					
 					return;
 				}
-				
-				String filename = filelistLocker.getSelectedValue();
-				if(filelocker.deleteFile(filename) >0)
-					System.out.println("The file " + filename + " is stored to file locker successfully!");
-				
-				listmodelLocker.removeElement(filename);
-				lblUsedSpace.setText(filelocker.getUsedKB());
+
+				for(String filename: selectFiles){
+					if(filelocker.deleteFile(filename))
+						System.out.println("The file " + filename + " is deleted from file locker successfully!");
+					
+					listmodelLocker.removeElement(filename);
+					lblUsedSpace.setText(filelocker.getUsedKB());
+				}
 			}
 		});
-		btnDelete.setBounds(510, 305, 72, 23);
+		btnDelete.setBounds(509, 404, 72, 23);
 		frame.getContentPane().add(btnDelete);
 		
 		JLabel lblLocalFiles = new JLabel("Local files");
@@ -309,7 +327,7 @@ public class GUI {
 				}
 			}
 		});
-		btnRemoveFile.setBounds(160, 305, 99, 23);
+		btnRemoveFile.setBounds(159, 404, 99, 23);
 		frame.getContentPane().add(btnRemoveFile);
 	}
 }
